@@ -3,6 +3,13 @@
 Purpose: evaluate task-specific model configurations using measured quality,
 elapsed time, and exposed usage. Slide editing is the first experiment.
 
+Canonical Python source is `src/task_model_fit/`, browser assets are `frontend/`,
+and native-edit/CLI/HTTP checks are `tests/`.
+`app.py` is the no-install launcher; the fixture lives under the package's `assets/`.
+Run `python3 app.py --open`, `python3 -m unittest discover -s tests -v`, and
+`node --check frontend/app.js`. Deeper guidance: `docs/architecture.md`,
+`docs/testing.md`, and `docs/roadmap.md`.
+
 - This repository is public. Publish only reviewed source and documentation;
   exclude source handoff documents, personal notes, credentials, and local runs.
 - Public app hosting or model-service deployment needs separate instruction.

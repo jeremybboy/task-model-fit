@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="slide-token" content="__SESSION_TOKEN__">
+  <title>Task Model Fit · Slide experiment</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+<main>
+  <header class="topbar">
+    <div><span class="eyebrow">FIRST EXPERIMENT · SLIDE EDITING</span><h1>Task Model Fit<span class="dot">.</span></h1></div>
+    <div class="connection"><span id="connectionBadge">Checking Codex…</span><button id="checkConnection" class="quiet">Check connection</button></div>
+  </header>
+  <p class="intro">One task. The same input. Compare outcomes, elapsed time, and available usage.</p>
+  <section class="controls" aria-label="Experiment controls">
+    <label>Action<select id="task"></select></label>
+    <label>Model<select id="model"></select></label>
+    <div class="run-controls"><button id="run" class="primary" disabled>Run selected model</button><button id="cancel" hidden>Stop</button></div>
+  </section>
+  <div class="context-line"><span id="modelDetail"></span><button id="customToggle" class="quiet">Write a custom instruction</button><button id="reset" class="quiet">Reset slide</button><button id="tools" class="quiet">Test slide tools · no model</button></div>
+  <section id="customEditor" class="custom-editor" aria-label="Custom slide instruction" hidden>
+    <label for="customInstruction">Describe your edit</label>
+    <p id="instructionHelp">Use Run selected model to send this instruction. You can add colored boxes with text, move shapes, or change the background.</p>
+    <textarea id="customInstruction" rows="3" maxlength="1500" aria-describedby="instructionHelp" placeholder="Create a yellow square in the bottom-right corner with the text Hello inside."></textarea>
+    <p class="subtle">One instruction per run · up to 1,500 characters · custom outcomes need your review</p>
+    <div id="customReply" class="custom-reply" aria-live="polite" hidden><strong>Model reply</strong><p id="customNote"></p></div>
+  </section>
+  <div id="alert" class="alert" role="alert" hidden></div>
+  <section class="slides" aria-label="Slide comparison">
+    <article><div class="pane-header"><h2>Before this action</h2><span>Frozen baseline</span></div><img id="before" alt="Original slide before this action"><a id="downloadBefore" download="before.pptx">Download original PPTX</a></article>
+    <article><div class="pane-header"><h2>After</h2><span id="afterLabel">Waiting for a run</span></div><img id="after" alt="Slide as edits are applied"><a id="downloadAfter" download="after.pptx">Download current PPTX</a></article>
+  </section>
+  <p class="preview-note">Native PowerPoint files · simplified preview for this fixture. Check the download in PowerPoint for exact rendering.</p>
+  <section class="results" aria-label="Run measurements">
+    <div><span class="metric-label">Total action</span><strong id="total">—</strong></div>
+    <div><span class="metric-label">Codex request elapsed</span><strong id="request">—</strong></div>
+    <div><span class="metric-label">Outcome checks</span><strong id="outcome">Not run</strong></div>
+  </section>
+  <section class="activity" aria-live="polite"><span class="status-dot"></span><p id="activity">Choose an action and run a model, or test the local slide tools.</p><span id="elapsed"></span></section>
+  <div id="audit"></div>
+  <details><summary>Events and measurement details</summary><p class="subtle">Request elapsed includes CLI startup, network and service overhead. Pure inference time is unavailable. Tool tests make no model call; replay uses saved events.</p><ol id="events"></ol><pre id="details">No measurements yet.</pre></details>
+  <section class="history"><h2>Runs on this same baseline and action</h2><p id="historyEmpty" class="subtle">Your real model runs will appear here.</p><div class="table-wrap"><table id="historyTable" hidden><thead><tr><th>Model / effort</th><th>Total</th><th>Request</th><th>Checks</th><th></th></tr></thead><tbody id="historyBody"></tbody></table></div></section>
+  <details id="setup"><summary>How the connection works</summary><p>Your browser talks to this local app. The app starts your installed Codex CLI using its saved ChatGPT sign-in. The selected remote model proposes an edit; fixed local tools apply it to a copy of the PowerPoint file.</p><p>In Terminal, use <code>codex login status</code> to check sign-in, or <code>codex login</code> if needed. The model IDs and effort levels used here are shown above. This app does not ask for an API key.</p><p id="connectionDetail" class="subtle"></p></details>
+  <footer>Prepared edits · same tools · measured results</footer>
+</main>
+</body></html>
