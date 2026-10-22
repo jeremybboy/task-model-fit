@@ -1,0 +1,13 @@
+# Task Model Fit
+
+Task-specific model configuration evaluation; slide editing is the first experiment.
+
+- [Overview and quick start](README.md)
+- [Current app and planned architecture](docs/architecture.md)
+- [Testing and evidence boundaries](docs/testing.md)
+- [Research and app roadmap](docs/roadmap.md)
+- [Contribution workflow](CONTRIBUTING.md)
+- [Security](SECURITY.md)
+- [Agent instructions](AGENTS.md)
+- Canonical Python source: src/task_model_fit/
+- Browser UI: frontend/
