@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="438" viewBox="0 0 1100 438" role="img" aria-labelledby="title desc">
+<title id="title">Task Model Fit: evaluate the tradeoffs</title>
+<desc id="desc">Evaluation plan: fix a task and its input, run model and reasoning-effort configurations, inspect success and preservation, then compare quality, elapsed time, and available usage. Slide editing is the first experiment. Automatic selection is future work.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#23352e" stroke-width="1.4"/></marker></defs>
+<rect width="1100" height="438" fill="#f5f1e7"/>
+<g fill="#23352e" font-family="Arial Narrow, Arial, sans-serif">
+<text x="36" y="37" font-size="15" letter-spacing="1.2">TASK MODEL FIT / EVALUATION PLAN</text>
+<text x="36" y="80" font-size="31" font-weight="700">Which configuration fits this task?</text>
+</g>
+<path d="M36 104H1064" stroke="#23352e" stroke-width="1.5"/>
+<g font-family="Arial, sans-serif" fill="#23352e">
+<text x="36" y="141" font-size="15">01 / FIX THE INPUT</text>
+<path d="M36 163H194L214 183V301H36Z" fill="#e7b66b"/>
+<path d="M194 163V183H214" fill="none" stroke="#23352e"/>
+<text x="54" y="205" font-size="23" font-weight="700">One task</text>
+<text x="54" y="239" font-size="17">Same input</text>
+<text x="54" y="266" font-size="17">Success criteria</text>
+<path d="M228 232H265" fill="none" stroke="#23352e" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="288" y="141" font-size="15">02 / RUN CONFIGURATIONS</text>
+<rect x="288" y="163" width="244" height="138" fill="#a8c8b3"/>
+<text x="306" y="205" font-size="23" font-weight="700">Model + effort</text>
+<text x="306" y="239" font-size="17">Keep editing tools fixed</text>
+<text x="306" y="266" font-size="17">Record observed events</text>
+<path d="M546 232H583" fill="none" stroke="#23352e" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="606" y="141" font-size="15">03 / INSPECT RESULTS</text>
+<path d="M606 165H824M606 165V301M606 301H824" fill="none" stroke="#23352e" stroke-width="2"/>
+<text x="624" y="205" font-size="23" font-weight="700">Check the output</text>
+<text x="624" y="239" font-size="17">Requested outcome</text>
+<text x="624" y="266" font-size="17">Preserve other content</text>
+<path d="M838 232H875" fill="none" stroke="#23352e" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="898" y="141" font-size="15">04 / COMPARE</text>
+<text x="898" y="205" font-size="23" font-weight="700">Tradeoffs</text>
+<text x="898" y="239" font-size="17">Output quality</text>
+<text x="898" y="266" font-size="17">Elapsed time</text>
+<text x="898" y="293" font-size="17">Available usage</text>
+</g>
+<path d="M36 337H1064" stroke="#23352e" stroke-width="1"/>
+<g font-family="Georgia, serif" fill="#23352e" font-size="19">
+<text x="36" y="374">First experiment: editable slides.</text>
+<text x="36" y="408">Broader task sets and automatic selection are future work; no model ranking is established.</text>
+</g>
+</svg>
