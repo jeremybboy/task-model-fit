@@ -192,6 +192,22 @@ def audit(before, after, task):
     old = {s["id"]: s for s in before["shapes"]}
     new = {s["id"]: s for s in after["shapes"]}
     checks = []
+    if task == "custom":
+        def fixed_content(shape):
+            return {key: value for key, value in shape.items() if key not in ("x", "y")}
+        checks = [
+            ("Slide dimensions preserved", (before["width"], before["height"]) == (after["width"], after["height"])),
+            ("Existing text, sizes, and styles preserved",
+             all(key in new and fixed_content(value) == fixed_content(new[key]) for key, value in old.items())),
+            ("Shapes remain within the slide", all(
+                s["x"] >= 0 and s["y"] >= 0 and s["width"] > 0 and s["height"] > 0
+                and s["x"] + s["width"] <= after["width"]
+                and s["y"] + s["height"] <= after["height"] for s in after["shapes"])),
+        ]
+        return {"passed": None if all(value for _, value in checks) else False,
+                "review_required": True,
+                "checks": [{"label": name, "passed": bool(value)} for name, value in checks],
+                "scope": "Structural checks only. Review the custom instruction and downloaded PPTX; request fulfillment is not automatically verified."}
     if task == "background":
         checks.append(("Background is #4A5054", after["background"].upper() == "#4A5054"))
         preserved = before["shapes"] == after["shapes"]

@@ -62,6 +62,16 @@ class NativeSlideTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 slides.apply(FIXTURE, Path(directory) / "out.pptx", {"op": "run_shell"})
 
+    def test_custom_audit_requires_review_and_detects_collateral_damage(self):
+        before = slides.inspect(FIXTURE)
+        audit = slides.audit(before, before, "custom")
+        self.assertIsNone(audit["passed"])
+        self.assertTrue(audit["review_required"])
+        self.assertTrue(all(check["passed"] for check in audit["checks"]))
+        damaged = copy.deepcopy(before)
+        damaged["shapes"][0]["text"] = "Unrequested replacement"
+        self.assertFalse(slides.audit(before, damaged, "custom")["passed"])
+
 
 FAKE_CLI = '''\
 #!{python}
@@ -87,6 +97,9 @@ else:
         print(json.dumps({{'type':'turn.failed','error':{{'message':'model is not supported PRIVATE_DETAIL'}}}}),flush=True);sys.exit(1)
     operation={{'op':'set_background','shape_id':None,'x':None,'y':None,'width':None,'height':None,'color':'#4A5054','text':None}}
     plan={{'operations':[operation],'note':'Changed the background.'}}
+    if scenario=='custom':
+        operation.update(op='add_box',x=1040,y=460,width=140,height=140,color='#FFFF00',text='Hello')
+        plan['note']='Added a yellow square labeled Hello.'
     if scenario=='invalid':plan={{'unexpected':'PRIVATE_RESPONSE'}}
     if scenario=='tool':print(json.dumps({{'type':'item.completed','item':{{'type':'command_execution','command':'PRIVATE_COMMAND'}}}}),flush=True)
     print(json.dumps({{'type':'item.completed','item':{{'type':'agent_message','text':json.dumps(plan)}}}}),flush=True)
@@ -161,6 +174,63 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(slides.inspect(lab.runs_dir / key / "after.pptx")["background"], "#4A5054")
         self.assertEqual(lab.state(lab.original)["slide"]["background"], "#000000")
         self.assertTrue((lab.runs_dir / key / "run.json").is_file())
+
+    def test_custom_instruction_round_trips_http_cli_native_file_and_history(self):
+        os.environ["SLIDE_TEST_SCENARIO"] = "custom"
+        lab = app.Lab(self.directory / "data", str(self.binary))
+        server = app.ThreadingHTTPServer(("127.0.0.1", 0), app.Handler)
+        server.lab = lab
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        base = f"http://127.0.0.1:{server.server_port}"
+        # Exercise UTF-8 input beyond the old 4096-byte HTTP body limit.
+        prompt = 'Create a yellow square labeled Hello.\n' + '🟨' * 1400
+        payload = {"task": "custom", "model": "gpt-6-luna", "baseline": lab.original,
+                   "mode": "live", "instruction": '  ' + prompt + '  '}
+        headers = {"X-Slide-Lab-Token": lab.token, "Content-Type": "application/json"}
+        try:
+            request = Request(base + '/api/run', headers=headers,
+                              data=json.dumps(payload, ensure_ascii=False).encode())
+            with urlopen(request, timeout=5) as response:
+                self.assertEqual(response.status, 202)
+                key = json.load(response)["id"]
+            deadline = time.monotonic() + 5
+            while lab.get_run(key)["status"] == "running" and time.monotonic() < deadline:
+                time.sleep(.01)
+            run = lab.get_run(key)
+            self.assertEqual(run["status"], "completed")
+            self.assertEqual(run["prompt"], prompt)
+            args = json.loads(self.capture.read_text())
+            self.assertIn('REQUEST: ' + prompt + '\nCURRENT_SLIDE:', args[-1])
+            self.assertEqual(args[args.index('--model') + 1], 'gpt-6-luna')
+            after = slides.inspect(lab.runs_dir / key / 'after.pptx')
+            added = next(shape for shape in after['shapes'] if shape['text'] == 'Hello')
+            self.assertEqual(added['fill'], '#FFFF00')
+            self.assertEqual(added['width'], added['height'])
+            self.assertEqual(after['shapes'][:-1], slides.inspect(FIXTURE)['shapes'])
+            self.assertIsNone(run['audit']['passed'])
+            self.assertTrue(all(check['passed'] for check in run['audit']['checks']))
+            self.assertEqual(run['note'], 'Added a yellow square labeled Hello.')
+            restored = app.Lab(self.directory / 'data')
+            self.assertEqual(restored.get_run(key)['prompt'], prompt)
+            with urlopen(base + lab.state(run['after'])['pptx']) as response:
+                self.assertTrue(response.read().startswith(b'PK'))
+        finally:
+            server.shutdown()
+            server.server_close()
+
+    def test_invalid_custom_requests_are_rejected_before_cli_or_run_creation(self):
+        lab = app.Lab(self.directory / 'data', str(self.binary))
+        for instruction in [None, '', '   ', ['not text'], 'x' * 1501, 'bad\x00text']:
+            with self.subTest(instruction=repr(instruction)[:35]), patch.object(bridge, 'connection') as connection:
+                with self.assertRaises(ValueError):
+                    lab.start('custom', bridge.MODEL, lab.original, 'live', instruction)
+                connection.assert_not_called()
+        with self.assertRaisesRegex(ValueError, 'tool test only supports presets'):
+            lab.start('custom', bridge.MODEL, lab.original, 'tools', 'Create a square')
+        with self.assertRaisesRegex(ValueError, 'Select Custom instruction'):
+            lab.start('background', bridge.MODEL, lab.original, 'live', 'Create a square')
+        self.assertEqual(lab.history(), [])
+        self.assertIsNone(lab.active)
 
 
 class HTTPTests(unittest.TestCase):

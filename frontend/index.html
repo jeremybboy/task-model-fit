@@ -20,7 +20,14 @@
     <label>Model<select id="model"></select></label>
     <div class="run-controls"><button id="run" class="primary" disabled>Run selected model</button><button id="cancel" hidden>Stop</button></div>
   </section>
-  <div class="context-line"><span id="modelDetail"></span><button id="reset" class="quiet">Reset slide</button><button id="tools" class="quiet">Test slide tools · no model</button></div>
+  <div class="context-line"><span id="modelDetail"></span><button id="customToggle" class="quiet">Write a custom instruction</button><button id="reset" class="quiet">Reset slide</button><button id="tools" class="quiet">Test slide tools · no model</button></div>
+  <section id="customEditor" class="custom-editor" aria-label="Custom slide instruction" hidden>
+    <label for="customInstruction">Describe your edit</label>
+    <p id="instructionHelp">Use Run selected model to send this instruction. You can add colored boxes with text, move shapes, or change the background.</p>
+    <textarea id="customInstruction" rows="3" maxlength="1500" aria-describedby="instructionHelp" placeholder="Create a yellow square in the bottom-right corner with the text Hello inside."></textarea>
+    <p class="subtle">One instruction per run · up to 1,500 characters · custom outcomes need your review</p>
+    <div id="customReply" class="custom-reply" aria-live="polite" hidden><strong>Model reply</strong><p id="customNote"></p></div>
+  </section>
   <div id="alert" class="alert" role="alert" hidden></div>
   <section class="slides" aria-label="Slide comparison">
     <article><div class="pane-header"><h2>Before this action</h2><span>Frozen baseline</span></div><img id="before" alt="Original slide before this action"><a id="downloadBefore" download="before.pptx">Download original PPTX</a></article>

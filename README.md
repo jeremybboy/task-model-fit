@@ -16,6 +16,11 @@ No pip or npm installation is needed to run it.
 
 Choose a prepared action and model configuration, compare frozen before/after previews, inspect outcome and preservation checks, and download an editable PPTX.
 Four actions are included: change the background, add a labeled box, repair an overlap, and leave the slide unchanged.
+Choose **Write a custom instruction** to describe an edit in your own words, then click **Run selected model**.
+For example: “Create a yellow square in the bottom-right corner with the text Hello inside.”
+Custom requests use the selected real model, show its reply, and save the instruction with the run.
+They support the same bounded tools: background changes, colored boxes with text, shape movement, and no change.
+Unsupported edits should produce an explanation; custom outcomes always need your review.
 The app handles the included fixture; it has no general deck upload.
 
 **Test slide tools · no model** exercises local edits without inference.
@@ -30,6 +35,7 @@ See [testing](docs/testing.md) for the boundary between simulated transport, nat
 
 The starter provides a bounded comparison workflow, not an automatic optimizer.
 Quality checks currently cover explicit structural properties of one slide; they do not establish general usefulness or visual quality.
+Preset checks can verify their specific requested outcome; custom instructions receive structural checks and a **Review needed** result rather than an automatic success verdict.
 Elapsed request time includes CLI startup, network, and service time; pure inference time and dollar cost are unavailable.
 Reported usage remains an exposed counter, not a measurement of hardware energy or compute consumption.
 

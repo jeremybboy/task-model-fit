@@ -28,6 +28,7 @@ TASKS = {
     "overlap": {"label": "Move the square clear of text", "prompt": "Move accent-square so it no longer overlaps any text box. Preserve its size, color and all other slide content."},
     "unchanged": {"label": "Leave the slide unchanged", "prompt": "Keep this slide exactly as it is. Make no changes."},
 }
+MAX_INSTRUCTION_LENGTH = 1500
 
 
 class Lab:
@@ -82,10 +83,24 @@ class Lab:
         with self.lock:
             return sorted((copy.deepcopy(run) for run in self.runs.values()), key=lambda r: r["created_utc"], reverse=True)[:100]
 
-    def start(self, task, model, baseline, mode):
+    def start(self, task, model, baseline, mode, instruction=None):
         started = time.monotonic()
-        if task not in TASKS or model not in codex.MODELS or mode not in ("live", "tools"):
+        if task not in (*TASKS, "custom") or model not in codex.MODELS or mode not in ("live", "tools"):
             raise ValueError("Choose an available task and model.")
+        if task == "custom":
+            if mode != "live":
+                raise ValueError("Custom instructions require Run selected model; the tool test only supports presets.")
+            if not isinstance(instruction, str) or not instruction.strip() or len(instruction) > MAX_INSTRUCTION_LENGTH:
+                raise ValueError(f"Write a custom instruction between 1 and {MAX_INSTRUCTION_LENGTH} characters.")
+            if any(ord(char) < 32 and char not in "\n\r\t" for char in instruction):
+                raise ValueError("The custom instruction contains unsupported control characters.")
+            prompt = instruction.strip()
+            task_label = "Custom instruction"
+        else:
+            if instruction not in (None, ""):
+                raise ValueError("Select Custom instruction to send a manual edit.")
+            prompt = TASKS[task]["prompt"]
+            task_label = TASKS[task]["label"]
         self.state(baseline)
         if mode == "live":
             status = codex.connection(self.binary)
@@ -99,7 +114,7 @@ class Lab:
             self.cancels[key] = threading.Event()
             self.runs[key] = {
                 "id": key, "created_utc": datetime.now(timezone.utc).isoformat(),
-                "task": task, "task_label": TASKS[task]["label"], "mode": mode,
+                "task": task, "task_label": task_label, "prompt": prompt, "mode": mode,
                 "model": model if mode == "live" else None,
                 "effort": codex.MODELS[model]["effort"] if mode == "live" else None,
                 "status": "running", "baseline": baseline, "after": baseline,
@@ -127,7 +142,7 @@ class Lab:
             emit("run.started", "Run started" if run["mode"] == "live" else "Slide-tool test started · no model")
             if run["mode"] == "live":
                 emit("model.started", f"Requesting {codex.MODELS[model]['label']} · {codex.MODELS[model]['effort']}")
-                plan, metrics = codex.request(codex.executable(self.binary), TASKS[run["task"]]["prompt"], before,
+                plan, metrics = codex.request(codex.executable(self.binary), run["prompt"], before,
                     directory, emit, cancel, model=model)
                 with self.lock:
                     run["metrics"].update(metrics)
@@ -167,7 +182,10 @@ class Lab:
                 run["metrics"].update(apply_save_seconds=round(apply_seconds, 4), render_seconds=round(render_seconds, 4),
                     audit_seconds=round(audit_seconds, 4), total_action_seconds=round(time.monotonic() - started, 4),
                     first_rendered_edit_seconds=next((s["received_seconds"] for s in run["steps"] if s["state"] != run["baseline"]), None))
-            emit("audit.completed", "Checks passed" if outcome["passed"] else "Review required: a check failed")
+            label = "Checks passed" if outcome["passed"] else "Review required: a check failed"
+            if outcome.get("review_required") and outcome["passed"] is None:
+                label = "Custom edit saved · review the requested outcome"
+            emit("audit.completed", label)
         except codex.ModelError as error:
             with self.lock:
                 run["metrics"].update(error.metrics)
@@ -254,11 +272,13 @@ class Handler(BaseHTTPRequestHandler):
             return
         try:
             size = int(self.headers.get("Content-Length", "0"))
-            if size > 4096:
+            if not 0 < size <= 8192:
                 raise ValueError("Request too large.")
             data = json.loads(self.rfile.read(size))
+            if not isinstance(data, dict):
+                raise ValueError("Expected a JSON object.")
             if self.path == "/api/run":
-                key = self.lab.start(data["task"], data["model"], data["baseline"], data["mode"])
+                key = self.lab.start(data["task"], data["model"], data["baseline"], data["mode"], data.get("instruction"))
                 self.send({"id": key}, status=202)
             elif self.path == "/api/cancel":
                 if data.get("id") in self.lab.cancels:

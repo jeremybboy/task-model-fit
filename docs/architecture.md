@@ -28,6 +28,22 @@ Selecting another action uses the last completed result as its baseline.
 Reset restores the original fixture. The right preview follows saved files;
 replay follows recorded timing and makes no new request.
 
+Custom instructions use the same CLI adapter and operation allowlist as presets.
+Each instruction is a single run, with the model's edit summary shown beneath the
+text field. Instructions are trimmed, limited to 1,500 characters, recorded in
+local run history, and included in the structured request. Blank/invalid input
+is rejected before launching the CLI; deterministic tool tests accept presets only.
+This is an instruction/reply interface, not a conversation with previous chat turns.
+
+Repeating the same custom instruction with another model keeps the input fixed.
+Changing its wording after a completed run uses that completed result as the new
+baseline. History comparison matches the baseline and exact normalized instruction.
+Reset restores the original fixture without deleting run history.
+
+Custom audits check dimensions, existing text/sizes/styles, and shape bounds.
+They cannot determine whether arbitrary wording was fulfilled, so the outcome
+requires human review even when those structural checks pass.
+
 The model receives structured text and geometry, not a slide image.
 The app requests operations rather than desktop automation. A plan is applied
 only after successful CLI completion, exit code zero, and local validation.

@@ -147,6 +147,8 @@ def request(binary, task_prompt, state, directory, emit, cancel, timeout=180, mo
         "origin at top-left. Keep every shape inside the slide. Preserve everything unrelated to the request. "
         "Use null for operation fields that do not apply. Colors use #RRGGBB. "
         "For move_shape use an exact existing shape id. For add_box use a readable size and explicit text. "
+        "A square is an add_box with equal width and height. If the request cannot be fulfilled "
+        "with these operations, use no_change and explain the limitation in your note; do not claim unsupported edits. "
         "Use no_change when no modification is needed. Return a brief note describing your action.\n"
         "REQUEST: " + task_prompt + "\nCURRENT_SLIDE: " + json.dumps(state, ensure_ascii=False)
     )

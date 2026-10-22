@@ -2,6 +2,7 @@
 const $ = id => document.getElementById(id);
 const token = document.querySelector('meta[name="slide-token"]').content;
 let bootstrap, baseline, latest = null, busy = false, activeId = null, timer = null, polling = null, started = 0, history = [], replayTimer = null;
+let comparisonInstruction = '';
 const seconds = value => typeof value === 'number' ? `${value.toFixed(2)} s` : '—';
 
 async function api(path, data) {
@@ -13,8 +14,10 @@ async function api(path, data) {
 function alertMessage(message='') { $('alert').textContent=message; $('alert').hidden=!message; }
 function setBusy(value) {
   busy=value; document.body.classList.toggle('busy',value);
-  for(const id of ['task','model','reset','tools']) $(id).disabled=value;
-  $('run').disabled=value; $('cancel').hidden=!value;
+  for(const id of ['task','model','reset','customToggle','customInstruction']) $(id).disabled=value;
+  $('tools').disabled=value || $('task').value==='custom';
+  $('run').disabled=value || ($('task').value==='custom' && !$('customInstruction').value.trim());
+  $('cancel').hidden=!value;
 }
 function showState(which, key) {
   $(which).src=`/files/snapshots/${key}.svg`;
@@ -24,6 +27,8 @@ function clearResult() {
   latest=null; $('total').textContent='—';$('request').textContent='—';$('outcome').textContent='Not run';
   $('audit').replaceChildren();$('events').replaceChildren();$('details').textContent='No measurements yet.';
   $('afterLabel').textContent='Waiting for a run';$('elapsed').textContent='';
+  $('customReply').hidden=true;$('customNote').textContent='';
+  $('activity').textContent=$('task').value==='custom' ? 'Write an instruction and run the selected model.' : 'Choose an action and run a model, or test the local slide tools.';
 }
 function updateModel() {
   const model=$('model').value, config=bootstrap.models[model];
@@ -38,7 +43,9 @@ function renderRun(run, replay=false) {
     const element=document.createElement('span');element.textContent=`${check.passed?'✓':'!'} ${check.label}`;element.classList.toggle('failed',!check.passed);return element;
   }));
   $('events').replaceChildren(...run.events.map(event => {const li=document.createElement('li');li.textContent=`${seconds(event.received_seconds)} · ${event.label}`;return li;}));
-  $('details').textContent=JSON.stringify({mode:run.mode,model:run.model,effort:run.effort,...run.metrics,audit_scope:run.audit?.scope,preview:run.preview_kind},null,2);
+  $('details').textContent=JSON.stringify({mode:run.mode,model:run.model,effort:run.effort,prompt:run.prompt,...run.metrics,audit_scope:run.audit?.scope,preview:run.preview_kind},null,2);
+  $('customReply').hidden=run.task!=='custom' || !run.note;
+  $('customNote').textContent=run.task==='custom' ? run.note || '' : '';
   $('activity').textContent=run.error || run.events.at(-1)?.label || 'Starting…';
   if(run.error) alertMessage(run.error);
   showState('after',run.after);
@@ -56,7 +63,8 @@ async function refreshConnection() {
 }
 async function refreshHistory() {
   history=await api('/api/runs');
-  const matching=history.filter(run=>run.baseline===baseline && run.task===$('task').value);
+  const matching=history.filter(run=>run.baseline===baseline && run.task===$('task').value
+    && (run.task!=='custom' || run.prompt===$('customInstruction').value.trim()));
   $('historyEmpty').hidden=matching.length>0;$('historyTable').hidden=matching.length===0;
   $('historyBody').replaceChildren(...matching.map(run=>{
     const tr=document.createElement('tr');
@@ -67,11 +75,13 @@ async function refreshHistory() {
 }
 function stopTimers() {clearInterval(timer);clearInterval(polling);clearInterval(replayTimer);timer=polling=replayTimer=null;}
 async function run(mode) {
+  const instruction=$('task').value==='custom' ? $('customInstruction').value.trim() : null;
+  if($('task').value==='custom' && !instruction){alertMessage('Write an instruction before running the model.');return;}
   alertMessage();stopTimers();clearResult();showState('before',baseline);showState('after',baseline);setBusy(true);
   started=performance.now();$('activity').textContent=mode==='live'?'Starting Codex request…':'Testing native slide tools · no model call…';
   timer=setInterval(()=>{$('elapsed').textContent=seconds((performance.now()-started)/1000);},100);
   try {
-    const result=await api('/api/run',{mode,task:$('task').value,model:$('model').value,baseline});activeId=result.id;
+    const result=await api('/api/run',{mode,task:$('task').value,model:$('model').value,baseline,instruction});activeId=result.id;
     const poll=async()=>{
       try {
         const record=await api(`/api/runs/${result.id}`);latest=record;renderRun(record);
@@ -100,12 +110,31 @@ async function replay(record) {
 async function init() {
   bootstrap=await api('/api/bootstrap');baseline=bootstrap.original.id;
   for(const [id,task] of Object.entries(bootstrap.tasks)){$('task').add(new Option(task.label,id));}
+  $('task').add(new Option('Custom instruction','custom'));
   for(const [id,model] of Object.entries(bootstrap.models)){$('model').add(new Option(`${model.label} · ${model.effort}`,id));}
   $('model').value='gpt-6.1-sol';updateModel();showState('before',baseline);showState('after',baseline);$('run').disabled=false;
   $('model').addEventListener('change',updateModel);
-  $('task').addEventListener('change',()=>{
+  function changeTask() {
     if(latest?.status==='completed')baseline=latest.after;
+    comparisonInstruction=$('customInstruction').value.trim();
+    $('customEditor').hidden=$('task').value!=='custom';
     clearResult();showState('before',baseline);showState('after',baseline);alertMessage();refreshHistory().catch(error=>alertMessage(error.message));
+    setBusy(false);
+  }
+  $('task').addEventListener('change',changeTask);
+  $('customToggle').addEventListener('click',()=>{
+    if($('task').value!=='custom'){$('task').value='custom';changeTask();}
+    $('customInstruction').focus();
+  });
+  $('customInstruction').addEventListener('input',()=>{
+    const instruction=$('customInstruction').value.trim();
+    if(instruction!==comparisonInstruction){
+      if(latest?.status==='completed')baseline=latest.after;
+      comparisonInstruction=instruction;
+      clearResult();showState('before',baseline);showState('after',baseline);alertMessage();
+      refreshHistory().catch(error=>alertMessage(error.message));
+    }
+    setBusy(false);
   });
   $('reset').addEventListener('click',()=>{baseline=bootstrap.original.id;clearResult();showState('before',baseline);showState('after',baseline);alertMessage();refreshHistory().catch(error=>alertMessage(error.message));});
   $('run').addEventListener('click',()=>run('live'));$('tools').addEventListener('click',()=>run('tools'));
